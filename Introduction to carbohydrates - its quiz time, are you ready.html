@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biochemistry Quiz: Carbohydrates</title>
+    <style>
+        :root {
+            --primary-color: #005f73;
+            --secondary-color: #0a9396;
+            --background-color: #f0f7f8;
+            --text-color: #343a40;
+            --correct-color: #2a9d8f;
+            --incorrect-color: #e76f51;
+            --disabled-color: #adb5bd;
+            --white-color: #ffffff;
+            --border-radius: 12px;
+            --box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .quiz-wrapper {
+            width: 100%;
+            max-width: 700px;
+            background-color: var(--white-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- Screens --- */
+        .screen {
+            padding: 40px;
+            box-sizing: border-box;
+        }
+        #splash-screen, #quiz-container, #end-screen {
+            display: none;
+        }
+        #splash-screen.active, #quiz-container.active, #end-screen.active {
+            display: block;
+        }
+
+        /* --- Splash Screen --- */
+        #splash-screen { text-align: center; }
+        #splash-screen h1 { color: var(--primary-color); margin-bottom: 20px; }
+        #splash-screen p { font-size: 1.2em; color: var(--text-color); margin-bottom: 30px; }
+        .time-options button {
+            display: block; width: 100%; padding: 15px; margin: 10px 0;
+            font-size: 1.1em; font-weight: bold; color: var(--white-color);
+            background-color: var(--secondary-color); border: none; border-radius: 8px;
+            cursor: pointer; transition: background-color 0.3s, transform 0.2s;
+        }
+        .time-options button:hover { background-color: var(--primary-color); transform: translateY(-2px); }
+        .time-options small { font-style: italic; color: rgba(255, 255, 255, 0.8); }
+
+        /* --- Quiz Container --- */
+        #quiz-container { padding: 30px 40px; }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        #progress-text { font-weight: bold; font-size: 1.1em; color: var(--primary-color); }
+        #timer { font-size: 1.5em; font-weight: bold; color: var(--incorrect-color); }
+        #question-text { font-size: 1.4em; margin-bottom: 25px; line-height: 1.5; color: var(--text-color); }
+        #answer-options { list-style-type: none; padding: 0; margin: 0 0 30px 0; }
+        .option {
+            background-color: #f8f9fa; border: 2px solid #dee2e6; padding: 15px; margin-bottom: 10px;
+            border-radius: 8px; cursor: pointer; transition: all 0.3s;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .option:not(.disabled):hover { border-color: var(--secondary-color); background-color: #eef8f8; }
+        .option.correct { background-color: #e3f5f3; border-color: var(--correct-color); color: var(--correct-color); font-weight: bold; }
+        .option.incorrect { background-color: #fdecea; border-color: var(--incorrect-color); color: var(--incorrect-color); font-weight: bold; opacity: 0.8; }
+        .option.disabled { pointer-events: none; }
+        .feedback-icon { font-size: 1.5em; display: none; }
+        .option.correct .feedback-icon, .option.incorrect .feedback-icon { display: inline; }
+        .quiz-footer { display: flex; justify-content: space-between; }
+        .quiz-btn {
+            padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em;
+            font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.2s;
+        }
+        #skip-btn { background-color: #ffc107; color: var(--text-color); }
+        #skip-btn:disabled { background-color: var(--disabled-color); cursor: not-allowed; color: #777; }
+        #next-btn { background-color: var(--primary-color); color: var(--white-color); }
+        #next-btn:disabled { background-color: var(--disabled-color); cursor: not-allowed; }
+
+        /* --- End Screen --- */
+        #end-screen { text-align: center; }
+        #end-screen h2 { color: var(--primary-color); margin-bottom: 10px; font-size: 2.2em; }
+        #analytics-summary {
+            display: flex; justify-content: space-around; background-color: #f8f9fa;
+            padding: 20px; border-radius: var(--border-radius); margin: 25px 0; text-align: center;
+        }
+        .analytic-item h4 { margin: 0 0 5px 0; color: var(--primary-color); font-size: 1em; }
+        .analytic-item p { margin: 0; font-size: 1.5em; font-weight: bold; color: var(--secondary-color); }
+        #end-message { margin: 30px 0; font-size: 1.1em; line-height: 1.6; }
+        #end-message ul { text-align: left; max-width: 400px; margin: 15px auto; }
+        #restart-btn { background-color: var(--primary-color); color: var(--white-color); }
+        
+        /* --- Confetti Animation for Perfect Score --- */
+        #animation-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+        .confetti {
+            position: absolute; width: 10px; height: 10px; background-color: var(--secondary-color);
+            opacity: 0.7; animation: fall 5s linear infinite;
+        }
+        .confetti:nth-child(2n) { background-color: #ee9b00; }
+        .confetti:nth-child(3n) { background-color: #e76f51; }
+        .confetti:nth-child(4n) { background-color: #2a9d8f; }
+        @keyframes fall {
+            from { transform: translateY(-10px) rotate(0deg); }
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+
+        /* --- Hint Modal --- */
+        #hint-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .hint-content { background-color: var(--white-color); padding: 30px; border-radius: var(--border-radius);
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 400px; }
+        .hint-content h3 { color: var(--primary-color); }
+        #hint-text { margin: 20px 0; }
+        #close-hint-btn { background-color: var(--secondary-color); color: var(--white-color); }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-wrapper">
+        <div id="animation-container"></div>
+
+        <div id="splash-screen" class="screen active">
+            <h1>Carbohydrates Quiz</h1>
+            <p>Test your knowledge! Choose a time limit per question to begin.</p>
+            <div class="time-options">
+                <button onclick="startGame(10)">10 seconds <br><small>"I'm a biochemistry whiz!"</small></button>
+                <button onclick="startGame(20)">20 seconds <br><small>"A comfortable pace."</small></button>
+                <button onclick="startGame(30)">30 seconds <br><small>"Let's take it easy."</small></button>
+            </div>
+        </div>
+
+        <div id="quiz-container" class="screen">
+            <div class="quiz-header">
+                <span id="progress-text"></span>
+                <div id="timer"></div>
+            </div>
+            <h2 id="question-text"></h2>
+            <ul id="answer-options"></ul>
+            <div class="quiz-footer">
+                <button id="skip-btn" class="quiz-btn" onclick="skipQuestion()">Skip (1 left)</button>
+                <button id="next-btn" class="quiz-btn" onclick="nextQuestion()">Next</button>
+            </div>
+        </div>
+        
+        <div id="end-screen" class="screen">
+            <h2 id="end-title">Quiz Complete!</h2>
+            <div id="analytics-summary">
+                <div class="analytic-item"><h4>SCORE</h4><p id="final-score"></p></div>
+                <div class="analytic-item"><h4>SKIPS USED</h4><p id="skips-used"></p></div>
+                <div class="analytic-item"><h4>AVG. TIME</h4><p id="avg-time"></p></div>
+            </div>
+            <div id="end-message"></div>
+            <button id="restart-btn" class="quiz-btn" onclick="restartQuiz()">Restart Quiz</button>
+        </div>
+    </div>
+    
+    <div id="hint-modal">
+        <div class="hint-content">
+            <h3>Time to Review!</h3>
+            <p id="hint-text"></p>
+            <button id="close-hint-btn" class="quiz-btn">Got it</button>
+        </div>
+    </div>
+
+    <script>
+        const questionPool = [
+            { question: "Which of the following is NOT one of the three critical functions of carbohydrates mentioned?", options: ["Source of Metabolic Energy", "Structural Components", "Genetic Information Storage", "Cellular Recognition", "Enzymatic Catalysis"], correctAnswer: 2, hintSection: "Section 1.2" },
+            { question: "What is the general stoichiometric formula for simple sugars?", options: ["Cn(H2O)2n", "Cn(H2O)n", "C2n(H2O)n", "Cn(HO)n", "CnH2nOn"], correctAnswer: 1, hintSection: "Section 2.2" },
+            { question: "The fundamental building block, or monomer, of a complex carbohydrate is called a:", options: ["Polysaccharide", "Disaccharide", "Amino Acid", "Monosaccharide", "Nucleotide"], correctAnswer: 3, hintSection: "Section 3.1" },
+            { question: "Glucose and fructose both have the formula C6H12O6 but different structures. They are examples of:", options: ["Isotopes", "Anomers", "Isomers", "Polymers", "Allotropes"], correctAnswer: 2, hintSection: "Section 3.3" },
+            { question: "What type of bond is formed when two monosaccharides are linked together via a condensation reaction?", options: ["Peptide bond", "Hydrogen bond", "Glycosidic bond", "Ionic bond", "Ester bond"], correctAnswer: 2, hintSection: "Section 4.3" },
+            { question: "The key difference between digestible starch and indigestible cellulose is:", options: ["The type of monosaccharide they are made of", "The type of glycosidic linkage between their monomers", "Their elemental composition", "Their solubility in water", "The number of carbons in their monomers"], correctAnswer: 1, hintSection: "Section 2.6" },
+            { question: "In the cyclic form of glucose, the C1 carbon, which was part of the original aldehyde group, is referred to as the:", options: ["Chiral carbon", "Penultimate carbon", "Anomeric carbon", "Alpha carbon", "Terminal carbon"], correctAnswer: 2, hintSection: "Section 2.2" },
+            { question: "In the standard Haworth projection of α-glucose, the hydroxyl (-OH) group on the anomeric carbon points:", options: ["Up, on the same side as the C6 carbon", "Down, on the opposite side of the C6 carbon", "To the left", "Away from the ring", "Towards the ring oxygen"], correctAnswer: 1, hintSection: "Section 2.4" },
+            { question: "Which polysaccharide is composed of α-glucose units and forms a helical coil structure?", options: ["Cellulose", "Chitin", "Starch", "Keratin", "Peptidoglycan"], correctAnswer: 2, hintSection: "Section 2.6" },
+            { question: "The indigestibility of cellulose in humans is due to our lack of enzymes capable of hydrolyzing which linkage?", options: ["α(1→4)", "α(1→6)", "β(1→4)", "β(1→6)", "Peptide bonds"], correctAnswer: 2, hintSection: "Section 2.6" },
+            { question: "A molecule that is non-superimposable on its mirror image is described as:", options: ["Symmetrical", "Chiral", "Aromatic", "An isomer", "Achiral"], correctAnswer: 1, hintSection: "Section 3.1" },
+            { question: "A pair of stereoisomers that are perfect, non-superimposable mirror images of each other are called:", options: ["Diastereoisomers", "Anomers", "Enantiomers", "Isotopes", "Epimers"], correctAnswer: 2, hintSection: "Section 3.2" },
+            { question: "Why can't humans metabolize L-glucose for energy?", options: ["It tastes bitter", "It cannot be absorbed", "It does not fit the active site of metabolic enzymes", "It is a different color", "It is too large to enter the cell"], correctAnswer: 2, hintSection: "Section 3.3" },
+            { question: "In a standard Fischer projection, which bonds are understood to be projecting towards the viewer (out of the page)?", options: ["Vertical bonds", "Horizontal bonds", "The longest carbon chain", "Bonds to hydrogen", "All bonds"], correctAnswer: 1, hintSection: "Section 3.4" },
+            { question: "The D and L naming convention is determined by the hydroxyl group on which carbon?", options: ["The anomeric carbon (C1)", "The most oxidized carbon", "The final carbon (C6)", "The penultimate carbon", "The C2 carbon"], correctAnswer: 3, hintSection: "Section 3.5" },
+            { question: "In the Fischer projection of a D-sugar, the hydroxyl group on the penultimate carbon is on the:", options: ["Right", "Left", "Top", "Bottom", "It depends on the sugar"], correctAnswer: 0, hintSection: "Section 3.5" },
+            { question: "Stereoisomers that are NOT mirror images of each other are known as:", options: ["Enantiomers", "Anomers", "Diastereoisomers", "Constitutional isomers", "Conformational isomers"], correctAnswer: 2, hintSection: "Section 3.6" },
+            { question: "Which of these is classified as a pentose sugar?", options: ["Glucose", "Pyruvate", "Ribose", "Lactose", "Fructose"], correctAnswer: 2, hintSection: "Section 3.2" },
+            { question: "The 'sugar coat' on the outside of a cell membrane, crucial for cell-to-cell recognition, is called the:", options: ["Cytoskeleton", "Glycocalyx", "Cell Wall", "Exoskeleton", "Lipid bilayer"], correctAnswer: 1, hintSection: "Section 1.2" },
+            { question: "The cyclization of an aldose sugar is a reaction between an aldehyde group and a(n):", options: ["Carboxyl group", "Amine group", "Hydroxyl group", "Phosphate group", "Thiol group"], correctAnswer: 2, hintSection: "Section 2.3" },
+            { question: "Which statement is uniquely true for enantiomers?", options: ["Different chemical formulas", "Different melting points", "They are non-superimposable mirror images", "Different connectivity", "Easily separated by distillation"], correctAnswer: 2, hintSection: "Section 3.2" },
+            { question: "The high selectivity of enzymes for specific 3D shapes of substrates is known as:", options: ["Biological isomerism", "Enzymatic preference", "Biological stereospecificity", "Chiral selection", "Metabolic efficiency"], correctAnswer: 2, hintSection: "Section 3.3" },
+            { question: "An oligosaccharide is typically a chain of how many monosaccharide units?", options: ["2", "3 to approximately 20", "20 to 100", "Hundreds or thousands", "Only 1"], correctAnswer: 1, hintSection: "Section 4.2" },
+            { question: "What small molecule is released during the condensation reaction that forms a glycosidic bond?", options: ["Carbon dioxide", "Oxygen", "ATP", "Water", "Ammonia"], correctAnswer: 3, hintSection: "Section 4.3" },
+            { question: "Chitin, the structural component of arthropod exoskeletons, is a type of:", options: ["Monosaccharide", "Protein", "Polysaccharide", "Lipid", "Nucleic acid"], correctAnswer: 2, hintSection: "Section 1.2" },
+            { question: "Carbohydrates are biomolecules composed exclusively of which three elements?", options: ["Carbon, Hydrogen, Nitrogen", "Carbon, Helium, Oxygen", "Carbon, Hydrogen, Oxygen", "Calcium, Hydrogen, Oxygen", "Carbon, Nitrogen, Phosphorus"], correctAnswer: 2, hintSection: "Section 2.1" },
+            { question: "Lactose, the sugar found in milk, is classified as a:", options: ["Monosaccharide", "Polysaccharide", "Oligosaccharide", "Polypeptide", "Disaccharide"], correctAnswer: 4, hintSection: "Section 4.2" },
+            { question: "The stable six-membered ring form of glucose is specifically called a:", options: ["Furanose ring", "Pyranose ring", "Benzene ring", "Cyclohexane ring", "Ketone ring"], correctAnswer: 1, hintSection: "Section 2.3" },
+            { question: "The 'lock and key' model is a powerful analogy for explaining:", options: ["DNA replication", "Protein folding", "Enzyme-substrate specificity", "Cellular respiration", "Photosynthesis"], correctAnswer: 2, hintSection: "Section 3.3" },
+            { question: "In the systematic name β(1→4) glycosidic linkage, what does the 'β' refer to?", options: ["The second sugar in the chain", "The configuration of the anomeric carbon", "The bond being easily broken", "The bond being strong", "The type of atoms in the bond"], correctAnswer: 1, hintSection: "Section 2.5" },
+            { question: "The 'handedness' of a molecule like glucose is a direct result of what property?", options: ["Its molecular weight", "Its solubility", "Its color", "Chirality", "Its elemental formula"], correctAnswer: 3, hintSection: "Section 3.1" },
+            { question: "A carbon atom covalently bonded to four *different* substituent groups is known as a:", options: ["Anomeric carbon", "Carbonyl carbon", "Alpha carbon", "Quaternary carbon", "Chiral centre"], correctAnswer: 4, hintSection: "Section 3.1" },
+            { question: "What property is known to differ between a pair of enantiomers?", options: ["Melting point", "Boiling point", "Solubility", "Interaction with plane-polarized light", "Molecular formula"], correctAnswer: 3, hintSection: "Section 3.2" },
+            { question: "The Latin word 'Laevus', meaning 'left', is the origin for which naming convention?", options: ["Alpha (α) notation", "Beta (β) notation", "D-sugar notation", "L-sugar notation", "Cis-trans notation"], correctAnswer: 3, hintSection: "Section 3.5" },
+            { question: "Diastereoisomers must have at least how many chiral centers?", options: ["0", "1", "2", "3", "4"], correctAnswer: 2, hintSection: "Section 3.6" },
+            { question: "Besides energy, the carbon skeletons of carbohydrates can serve as versatile precursors for:", options: ["Water formation", "Inorganic ions", "The biosynthesis of other molecules", "Electron transport", "Maintaining blood pH"], correctAnswer: 2, hintSection: "Section 1.2" },
+            { question: "Glycoproteins and glycolipids, with their attached carbohydrate chains, are critical for which function?", options: ["Energy storage inside the cell", "Cellular recognition and signaling", "Structural support of the nucleus", "Oxygen transport in the blood", "Muscle contraction"], correctAnswer: 1, hintSection: "Section 1.2" },
+            { question: "The conversion of a linear Fischer projection to a cyclic Haworth projection is known as:", options: ["Oxidation", "Reduction", "Polymerization", "Hydrolysis", "Cyclization"], correctAnswer: 4, hintSection: "Section 2.3" },
+            { question: "Which two physical properties are expected to be identical for a pair of enantiomers like D-glucose and L-glucose?", options: ["Taste and smell", "Shape and 3D structure", "Rotation of light", "Melting point and boiling point", "Reaction with enzymes"], correctAnswer: 3, hintSection: "Section 3.2" },
+            { question: "Which polysaccharide is the primary structural component of fungal cell walls?", options: ["Starch", "Glycogen", "Cellulose", "Chitin", "Peptidoglycan"], correctAnswer: 3, hintSection: "Section 1.2" }
+        ];
+
+        // --- DOM Elements ---
+        const splashScreen = document.getElementById('splash-screen');
+        const quizContainer = document.getElementById('quiz-container');
+        const endScreen = document.getElementById('end-screen');
+        const progressText = document.getElementById('progress-text');
+        const questionText = document.getElementById('question-text');
+        const answerOptions = document.getElementById('answer-options');
+        const nextBtn = document.getElementById('next-btn');
+        const skipBtn = document.getElementById('skip-btn');
+        const timerEl = document.getElementById('timer');
+        const hintModal = document.getElementById('hint-modal');
+        const hintText = document.getElementById('hint-text');
+        const closeHintBtn = document.getElementById('close-hint-btn');
+        const animationContainer = document.getElementById('animation-container');
+
+        // --- Quiz State & Analytics Variables ---
+        let currentQuizQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let wrongAttempts = 0;
+        let skipUsed = false;
+        let questionTime = 20;
+        let timerInterval;
+        let timeLeft;
+        let timePerQuestion = [];
+        const MAX_QUESTIONS = 8;
+        
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function startGame(time) {
+            questionTime = time;
+            setupQuiz();
+            displayQuestion();
+            switchScreen('quiz-container');
+        }
+
+        function setupQuiz() {
+            const shuffled = [...questionPool].sort(() => 0.5 - Math.random());
+            currentQuizQuestions = shuffled.slice(0, MAX_QUESTIONS);
+        }
+
+        function displayQuestion() {
+            resetState();
+            const currentQuestion = currentQuizQuestions[currentQuestionIndex];
+            progressText.innerText = `Question ${currentQuestionIndex + 1} of ${MAX_QUESTIONS}`;
+            questionText.innerText = currentQuestion.question;
+
+            currentQuestion.options.forEach((option, index) => {
+                const li = document.createElement('li');
+                li.classList.add('option');
+                li.innerHTML = `<span>${option}</span><span class="feedback-icon"></span>`;
+                li.dataset.index = index;
+                li.addEventListener('click', selectAnswer);
+                answerOptions.appendChild(li);
+            });
+            startTimer();
+        }
+
+        function resetState() {
+            wrongAttempts = 0;
+            nextBtn.disabled = true;
+            answerOptions.innerHTML = '';
+            clearInterval(timerInterval);
+        }
+
+        function startTimer() {
+            timeLeft = questionTime;
+            timerEl.innerText = timeLeft;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            const timeTaken = questionTime - timeLeft;
+            timePerQuestion.push(timeTaken);
+        }
+
+        function selectAnswer(e) {
+            const selectedOption = e.currentTarget;
+            const selectedIndex = parseInt(selectedOption.dataset.index);
+            const correctIndex = currentQuizQuestions[currentQuestionIndex].correctAnswer;
+
+            if (selectedIndex === correctIndex) {
+                stopTimer();
+                score++;
+                selectedOption.classList.add('correct');
+                selectedOption.querySelector('.feedback-icon').innerText = '✅';
+                Array.from(answerOptions.children).forEach(option => option.classList.add('disabled'));
+                nextBtn.disabled = false;
+            } else {
+                selectedOption.classList.add('incorrect', 'disabled');
+                selectedOption.querySelector('.feedback-icon').innerText = '❌';
+                wrongAttempts++;
+                if (wrongAttempts >= 2) {
+                    stopTimer();
+                    Array.from(answerOptions.children).forEach(option => {
+                        option.classList.add('disabled');
+                        if (parseInt(option.dataset.index) === correctIndex) {
+                            option.classList.add('correct');
+                        }
+                    });
+                    showHint();
+                    nextBtn.disabled = false;
+                }
+            }
+        }
+
+        function handleTimeOut() {
+            stopTimer();
+            showHint();
+            nextBtn.disabled = false;
+            Array.from(answerOptions.children).forEach(option => {
+                option.classList.add('disabled');
+                if (parseInt(option.dataset.index) === currentQuizQuestions[currentQuestionIndex].correctAnswer) {
+                    option.classList.add('correct');
+                }
+            });
+        }
+
+        function showHint() {
+            const hint = currentQuizQuestions[currentQuestionIndex].hintSection;
+            hintText.innerHTML = `Remember to check your notes! <br><strong>Hint: Look in ${hint}.</strong>`;
+            hintModal.style.display = 'flex';
+        }
+        
+        closeHintBtn.addEventListener('click', () => { hintModal.style.display = 'none'; });
+
+        function skipQuestion() {
+            if (!skipUsed) {
+                skipUsed = true;
+                skipBtn.innerText = 'Skip (0 left)';
+                skipBtn.disabled = true;
+                clearInterval(timerInterval);
+                nextQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < MAX_QUESTIONS) {
+                displayQuestion();
+            } else {
+                showEndScreen();
+            }
+        }
+
+        function showEndScreen() {
+            switchScreen('end-screen');
+            
+            const totalTime = timePerQuestion.reduce((acc, time) => acc + time, 0);
+            const avgTime = timePerQuestion.length > 0 ? (totalTime / timePerQuestion.length).toFixed(1) : 0;
+            
+            document.getElementById('final-score').innerText = `${score}/${MAX_QUESTIONS}`;
+            document.getElementById('skips-used').innerText = skipUsed ? '1' : '0';
+            document.getElementById('avg-time').innerText = `${avgTime}s`;
+
+            const endTitle = document.getElementById('end-title');
+            const endMessage = document.getElementById('end-message');
+            
+            if (score === MAX_QUESTIONS) {
+                endTitle.innerText = "Perfect Score!";
+                endMessage.innerHTML = "<p>Outstanding work! You have a solid grasp of these concepts.</p>";
+                triggerConfetti();
+            } else if (score >= 6) {
+                endTitle.innerText = "Great Effort!";
+                endMessage.innerHTML = "<p>You're so close! A little more review and you'll be an expert. Better luck next time. Wanna try again?</p>";
+            } else if (score >= 3) {
+                endTitle.innerText = "Good Foundation!";
+                endMessage.innerHTML = "<p>You're building a good foundation. The information is always in the brain cells somewhere! A quick review will help solidify these ideas.</p>";
+            } else {
+                endTitle.innerText = "Time to Revise!";
+                endMessage.innerHTML = `<p>It looks like this was a tough one. That's completely okay! We recommend reviewing the material again. Here are some tips:</p>
+                    <ul>
+                        <li>Read through the notes one section at a time.</li>
+                        <li>Try to draw the structures (like α and β-glucose) from memory.</li>
+                        <li>Explain the difference between starch and cellulose to a friend.</li>
+                    </ul>`;
+            }
+        }
+        
+        function triggerConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.animationDelay = Math.random() * 3 + 's';
+                animationContainer.appendChild(confetti);
+            }
+        }
+
+        function restartQuiz() {
+            // Reset state variables
+            currentQuestionIndex = 0;
+            score = 0;
+            wrongAttempts = 0;
+            skipUsed = false;
+            timePerQuestion = [];
+
+            // Reset UI elements
+            skipBtn.disabled = false;
+            skipBtn.innerText = 'Skip (1 left)';
+            animationContainer.innerHTML = ''; // Clear any leftover confetti
+
+            // Go back to the splash screen
+            switchScreen('splash-screen');
+        }
+        
+        // Initial setup
+        switchScreen('splash-screen');
+    </script>
+</body>
+</html>```
